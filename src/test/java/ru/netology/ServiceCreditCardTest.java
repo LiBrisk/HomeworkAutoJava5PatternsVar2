@@ -1,19 +1,14 @@
 package ru.netology;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Keys;
 import ru.netology.dataGenerator.DataGenerator;
 
-import java.time.Duration;
-
-import static com.codeborne.selenide.Condition.exactText;
-import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Condition.*;
 import static com.codeborne.selenide.Selectors.byText;
 import static com.codeborne.selenide.Selenide.*;
-import static ru.netology.dataGenerator.DataGenerator.*;
 
 public class ServiceCreditCardTest {
 
@@ -21,52 +16,37 @@ public class ServiceCreditCardTest {
     public void openPage() {
         open("http://localhost:9999/");
     }
-    String date = DataGenerator.generateDate(7, "dd.MM.yyyy");
 
     @Test
     @DisplayName("Проверяем планирование встречи через генератор данных")
     void shouldRegistrationHappyTest() {
-        $("[data-test-id='city'] input ").setValue(generateCity());
-        $x("//*[@class='menu-item__control']").click();
-        $("[data-test-id='date'] input ").click();
-        $("[data-test-id='date'] input").sendKeys(Keys.CONTROL + "a", Keys.DELETE);
-        $("[data-test-id='date'] input ").setValue(date);
-        $("[data-test-id='name'] input ").setValue(generateName());
-        $("[data-test-id='phone'] input ").setValue(generatePhone());
+        var validUser = DataGenerator.Registration.generateUser("ru");
+        var daysToAddForFirstMeeting = 4;
+        var firstMeetingDate = DataGenerator.generateDate(daysToAddForFirstMeeting);
+        var daysToAddForSecondMeeting = 7;
+        var secondMeetingDate = DataGenerator.generateDate(daysToAddForSecondMeeting);
+        $("[data-test-id='city'] input").setValue(validUser.getCity());
+        $("[data-test-id='date'] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME,
+                Keys.BACK_SPACE));
+        $("[data-test-id='date'] input").setValue(firstMeetingDate);
+        $("[data-test-id='name'] input").setValue(validUser.getName());
+        $("[data-test-id='phone'] input").setValue(validUser.getPhone());
         $("[data-test-id='agreement']").click();
-        $$("button").find(exactText("Запланировать")).click();
-        if ($$("button").find(exactText("Перепланировать")).exists()) {
-            $$("button").find(exactText("Перепланировать")).click();
-        }
-        $(byText("Успешно!")).shouldBe(visible, Duration.ofMillis(15000));
-        String actualText = $x("//*[@class='notification__content']").getText();
-        String expectedText = "Встреча успешно запланирована на " + date;
-        Assertions.assertEquals(expectedText, actualText, "Сообщение в сплывающем окне соответствует ожидаемому");
-    }
-
-    @Test
-    @DisplayName("Проверяем перепланирование встречи")
-    void shouldRegistrationRescheduleTest() {
-        $("[data-test-id='city'] input ").setValue("Краснодар");
-        $x("//*[@class='menu-item__control']").click();
-        $("[data-test-id='date'] input ").click();
-        $("[data-test-id='date'] input").sendKeys(Keys.CONTROL + "a", Keys.DELETE);
-        $("[data-test-id='date'] input ").setValue(date);
-        $("[data-test-id='name'] input ").setValue("Траханова Ксения");
-        $("[data-test-id='phone'] input ").setValue("+8 929 822 06 15");
-        $("[data-test-id='agreement']").click();
-        $$("button").find(exactText("Запланировать")).click();
-        $x("(//*[@class='notification__content'])[2]").shouldBe(visible);
-        String actualRescheduleText = $x("(//*[@class='notification__content'])[2]").getText()
-                .replace("\n", "")
-                .replace("\r", "")
-                .replace("<br>", "\n");
-        String expectedRescheduleText = "У вас уже запланирована встреча на другую дату. Перепланировать?Перепланировать";
-        Assertions.assertEquals(expectedRescheduleText, actualRescheduleText, "Сообщение в сплывающем окне не соответствует ожидаемому");
-        $$("button").find(exactText("Перепланировать")).click();
-        $(byText("Успешно!")).shouldBe(visible, Duration.ofMillis(15000));
-        String actualText = $x("//*[@class='notification__content']").getText();
-        String expectedText = "Встреча успешно запланирована на " + date;
-        Assertions.assertEquals(expectedText, actualText, "Сообщение в сплывающем окне не соответствует ожидаемому");
+        $(byText("Запланировать")).click();
+        $(byText("Успешно!")).shouldBe();
+        $("[data-test-id='success-notification'] .notification__content")
+                .shouldHave(exactText("Встреча успешно запланирована на " + firstMeetingDate))
+                .shouldBe(visible);
+        $("[data-test-id='date'] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME,
+                Keys.BACK_SPACE));
+        $("[data-test-id='date'] input").setValue(secondMeetingDate);
+        $(byText("Запланировать")).click();
+        $("[data-test-id='replan-notification'] .notification__content")
+                .shouldHave(text("У вас уже запланирована встреча на другую дату. Перепланировать?"))
+                .shouldBe(visible);
+        $("[data-test-id='replan-notification'] button").click();
+        $("[data-test-id='success-notification'] .notification__content")
+                .shouldHave(exactText("Встреча успешно запланирована на " + secondMeetingDate))
+                .shouldBe(visible);
     }
 }
