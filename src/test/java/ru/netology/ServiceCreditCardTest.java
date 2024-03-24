@@ -45,7 +45,7 @@ public class ServiceCreditCardTest {
     }
 
     @Test
-    @DisplayName("роверяем перепланирование встречи")
+    @DisplayName("Проверяем перепланирование встречи")
     void shouldRegistrationRescheduleTest() {
         $("[data-test-id='city'] input ").setValue("Краснодар");
         $x("//*[@class='menu-item__control']").click();
